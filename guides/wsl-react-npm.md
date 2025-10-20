@@ -20,7 +20,7 @@ Run the following commands from WSL2 and save the output for reference:
 cd /mnt/c/Users/SKEAI/welcome-to-docker
 pwd                          # confirm the project directory
 ls -l package.json           # ensure package.json exists
-rg 'react-scripts' package.json
+grep -n 'react-scripts' package.json
 ls -ld node_modules          # presence & permissions of node_modules
 ls node_modules/react-scripts  # verify dependency contents (if folder exists)
 npm config list
@@ -87,7 +87,7 @@ After dependencies install successfully:
 
 1. Confirm the npm scripts:
    ```bash
-   cat package.json | jq '.scripts'
+   node -p "require('./package.json').scripts"
    ```
    Ensure there is a `"test": "react-scripts test"` entry.
 2. Discover tests:
@@ -114,7 +114,7 @@ Share the logs along with the outputs of:
 
 ```bash
 ls -ld . node_modules package.json
-rg 'react-scripts' package.json
+grep -n 'react-scripts' package.json
 find src -name '*.test.js' -o -name '*.spec.js'
 ```
 
