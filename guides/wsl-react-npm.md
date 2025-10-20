@@ -2,6 +2,14 @@
 
 This guide documents a reproducible workflow for diagnosing and fixing `npm test` failures in a Create React App (CRA) project when running on Ubuntu 22.04 inside WSL2. The scenario mirrors an environment where the project lives on the Windows-mounted filesystem (`/mnt/c/...`), `npm install` previously failed with `EACCES`, and subsequent test runs report `sh: 1: react-scripts: not found`.
 
+## Prerequisites
+
+Before you begin, ensure the following:
+
+* **WSL version** – `wsl.exe --status` should report WSL2. If you are on WSL1, upgrade first; the instructions below assume a Linux kernel with systemd-style permissions.
+* **Node.js + npm** – `node -v` and `npm -v` should return versions that match your project's `engines` field (if defined). If the commands are missing, install Node.js through the official NodeSource repository or nvm before continuing.
+* **Optional: Docker** – Only required if you intend to use the container-based workaround in [§5](#5-alternative-use-a-node-docker-container).
+
 ## 1. Understand the Failure
 
 When `npm test` prints `sh: 1: react-scripts: not found`, the `react-scripts` binary is missing from `node_modules/.bin`. In CRA projects, this almost always indicates that the dependency install step did not complete. In our case the root cause is an `EACCES` error that prevented `npm install` from writing to `node_modules` and npm's cache on the Windows-mounted drive.
@@ -20,6 +28,7 @@ Run the following commands from WSL2 and save the output for reference:
 cd /mnt/c/Users/SKEAI/welcome-to-docker
 pwd                          # confirm the project directory
 ls -l package.json           # ensure package.json exists
+node -p "require('./package.json').name"  # verify the file parses
 grep -n 'react-scripts' package.json
 ls -ld node_modules          # presence & permissions of node_modules
 ls node_modules/react-scripts  # verify dependency contents (if folder exists)
@@ -29,12 +38,20 @@ npm test -- --verbose
 
 If any command fails, note the full error text. In particular, confirm whether `react-scripts` is listed in `package.json` (usually under `dependencies`).
 
+If `grep` finds no `react-scripts` entry, add it explicitly:
+
+```bash
+printf '\n  "react-scripts": "^5.0.1"\n'  # copy the dependency string
+```
+
+Then open `package.json` in your editor and add the dependency under either `dependencies` or `devDependencies`. Save the file before proceeding to the next section.
+
 ## 3. Move the Project to the Linux Filesystem
 
 `npm` works more reliably on the native ext4 filesystem mounted at `/home/<user>`. Copy the project there and reset the install:
 
 ```bash
-cp -r /mnt/c/Users/SKEAI/welcome-to-docker ~/welcome-to-docker-local
+rsync -a --info=progress2 /mnt/c/Users/SKEAI/welcome-to-docker/ ~/welcome-to-docker-local/
 cd ~/welcome-to-docker-local
 chmod -R u+w .
 npm cache clean --force
@@ -42,13 +59,21 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
-*If `cp` reports that the source path does not exist, double-check the directory name or mount point. Use `ls /mnt/c/Users` to list available users and locate the project folder.*
+*If `rsync` reports that the source path does not exist, double-check the directory name or mount point. Use `ls /mnt/c/Users` to list available users and locate the project folder. The trailing slash in the source path ensures `.git` and other dotfiles are copied.*
+
+If `~/welcome-to-docker-local` already exists from a prior attempt, remove it or sync again to refresh the contents:
+
+```bash
+rm -rf ~/welcome-to-docker-local
+rsync -a --info=progress2 /mnt/c/Users/SKEAI/welcome-to-docker/ ~/welcome-to-docker-local/
+```
 
 Once installation succeeds, verify:
 
 ```bash
 ls node_modules/react-scripts
 npm ls react-scripts
+node -p "require('./package.json').dependencies['react-scripts']"
 ```
 
 ## 4. Configure npm to Avoid Future Permission Errors
@@ -61,6 +86,7 @@ npm config set prefix ~/.npm-global
 npm config set cache ~/.npm/_cacache
 echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
+npm config list --location=global | grep -E 'prefix|cache'
 ```
 
 Close any editors (e.g., VS Code Remote-WSL) that might lock files, then re-run `npm install` inside the project. If permissions remain problematic on `/mnt/c`, continue working from the copied project under `~/welcome-to-docker-local`.
@@ -80,6 +106,8 @@ Docker writes files as `root`, so reset ownership afterwards if necessary:
 ```bash
 sudo chown -R $USER:$USER node_modules package-lock.json
 ```
+
+If Docker is unavailable, you can achieve a similar clean environment by using `npx degit` to scaffold a disposable CRA project elsewhere, confirming that your Node.js installation works, and then returning to the original repository.
 
 ## 6. Validate Scripts and Tests
 
@@ -116,6 +144,7 @@ Share the logs along with the outputs of:
 ls -ld . node_modules package.json
 grep -n 'react-scripts' package.json
 find src -name '*.test.js' -o -name '*.spec.js'
+npm doctor
 ```
 
 These diagnostics make it possible to distinguish between dependency, configuration, and test-level failures.
