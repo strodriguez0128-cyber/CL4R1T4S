@@ -2,6 +2,15 @@
 
 This guide documents a reproducible workflow for diagnosing and fixing `npm test` failures in a Create React App (CRA) project when running on Ubuntu 22.04 inside WSL2. The scenario mirrors an environment where the project lives on the Windows-mounted filesystem (`/mnt/c/...`), `npm install` previously failed with `EACCES`, and subsequent test runs report `sh: 1: react-scripts: not found`.
 
+> **Quick fix in a hurry**
+>
+> 1. `cd /mnt/c/Users/SKEAI/welcome-to-docker`
+> 2. `npm install --save-dev react-scripts`
+> 3. If `npm install` throws `EACCES`, continue with [§3](#3-move-the-project-to-the-linux-filesystem) to relocate the project before retrying the install.
+> 4. Re-run `npm test -- --watchAll=false` once dependencies finish installing.
+
+The remaining sections provide the longer-form diagnostics for when these four steps are interrupted by filesystem or configuration issues.
+
 ## Prerequisites
 
 Before you begin, ensure the following:
@@ -38,19 +47,20 @@ npm test -- --verbose
 
 If any command fails, note the full error text. In particular, confirm whether `react-scripts` is listed in `package.json` (usually under `dependencies`).
 
-If `grep` finds no `react-scripts` entry, add it explicitly:
+If `grep` finds no `react-scripts` entry, add it explicitly using npm so the correct version is recorded in both `package.json` and `package-lock.json`:
 
 ```bash
-printf '\n  "react-scripts": "^5.0.1"\n'  # copy the dependency string
+npm install --save-dev react-scripts
 ```
 
-Then open `package.json` in your editor and add the dependency under either `dependencies` or `devDependencies`. Save the file before proceeding to the next section.
+Re-run the `grep` command afterwards to confirm that the dependency appears in the file before proceeding to the next section.
 
 ## 3. Move the Project to the Linux Filesystem
 
 `npm` works more reliably on the native ext4 filesystem mounted at `/home/<user>`. Copy the project there and reset the install:
 
 ```bash
+sudo apt-get update && sudo apt-get install -y rsync  # install rsync if it is missing
 rsync -a --info=progress2 /mnt/c/Users/SKEAI/welcome-to-docker/ ~/welcome-to-docker-local/
 cd ~/welcome-to-docker-local
 chmod -R u+w .
@@ -73,7 +83,7 @@ Once installation succeeds, verify:
 ```bash
 ls node_modules/react-scripts
 npm ls react-scripts
-node -p "require('./package.json').dependencies['react-scripts']"
+node -p "require('./package.json').dependencies?.['react-scripts'] || require('./package.json').devDependencies?.['react-scripts']"
 ```
 
 ## 4. Configure npm to Avoid Future Permission Errors
@@ -84,7 +94,7 @@ To keep using the original Windows-mounted project path, reconfigure npm to stor
 mkdir -p ~/.npm-global ~/.npm/_cacache
 npm config set prefix ~/.npm-global
 npm config set cache ~/.npm/_cacache
-echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
+grep -qxF 'export PATH="$HOME/.npm-global/bin:$PATH"' ~/.bashrc || echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 npm config list --location=global | grep -E 'prefix|cache'
 ```
@@ -97,14 +107,14 @@ If filesystem permissions continue to block progress, run installs within an off
 
 ```bash
 cd /mnt/c/Users/SKEAI/welcome-to-docker
-docker run --rm -it -v $(pwd):/app -w /app node:22 npm install
-docker run --rm -it -v $(pwd):/app -w /app node:22 npm test -- --watchAll=false
+docker run --rm -it -v "$(pwd)":/app -w /app node:22 npm install
+docker run --rm -it -v "$(pwd)":/app -w /app node:22 npm test -- --watchAll=false
 ```
 
 Docker writes files as `root`, so reset ownership afterwards if necessary:
 
 ```bash
-sudo chown -R $USER:$USER node_modules package-lock.json
+sudo chown -R "$USER:$USER" node_modules package-lock.json
 ```
 
 If Docker is unavailable, you can achieve a similar clean environment by using `npx degit` to scaffold a disposable CRA project elsewhere, confirming that your Node.js installation works, and then returning to the original repository.
@@ -117,7 +127,7 @@ After dependencies install successfully:
    ```bash
    node -p "require('./package.json').scripts"
    ```
-   Ensure there is a `"test": "react-scripts test"` entry.
+   Ensure there is a `"test": "react-scripts test"` entry (add it with `npm set-script test "react-scripts test"` if it is missing).
 2. Discover tests:
    ```bash
    find src -name '*.test.js' -o -name '*.spec.js'
