@@ -50,8 +50,10 @@ If any command fails, note the full error text. In particular, confirm whether `
 If `grep` finds no `react-scripts` entry, add it explicitly using npm so the correct version is recorded in both `package.json` and `package-lock.json`:
 
 ```bash
-npm install --save-dev react-scripts
+npm install --save-dev react-scripts || true
 ```
+
+If this command still fails with `EACCES`, continue with the relocation workflow below; the dependency will be reinstalled from the Linux filesystem.
 
 Re-run the `grep` command afterwards to confirm that the dependency appears in the file before proceeding to the next section.
 
@@ -144,9 +146,11 @@ A clean run verifies that the earlier JSX fix (e.g., converting `class` to `clas
 If problems remain, gather detailed logs for deeper analysis:
 
 ```bash
-npm install --verbose 2>&1 | tee npm-install.log
-npm test -- --verbose 2>&1 | tee npm-test.log
+npm install --verbose 2>&1 | tee npm-install.log || true
+npm test -- --verbose 2>&1 | tee npm-test.log || true
 ```
+
+The trailing `|| true` ensures the log capture continues even if the commands exit with non-zero status.
 
 Share the logs along with the outputs of:
 
@@ -158,6 +162,73 @@ npm doctor
 ```
 
 These diagnostics make it possible to distinguish between dependency, configuration, and test-level failures.
+
+## Appendix: Run the Workflow as a Single Script
+
+If you prefer to execute the entire remediation flow in one go, create the following helper script from within WSL. It combines
+the diagnostics, relocation, reinstall, and verification steps from the sections above.
+
+```bash
+cat <<'EOF' > ~/run-cra-react-scripts-fix.sh
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_WIN_PATH="/mnt/c/Users/SKEAI/welcome-to-docker"
+PROJECT_LINUX_PATH="$HOME/welcome-to-docker-local"
+
+echo "[1/7] Checking prerequisites"
+if command -v wsl.exe >/dev/null 2>&1; then
+  wsl.exe --status || true
+else
+  echo "wsl.exe command not found (expected inside WSL2)"
+fi
+node -v
+npm -v
+
+echo "[2/7] Collecting diagnostics"
+cd "$PROJECT_WIN_PATH"
+pwd
+ls -l package.json
+node -p "require('./package.json').name"
+grep -n 'react-scripts' package.json || true
+ls -ld node_modules || true
+ls node_modules/react-scripts || true
+npm config list
+
+echo "[3/7] Ensuring react-scripts is present"
+npm install --save-dev react-scripts || true
+
+echo "[4/7] Relocating to Linux filesystem and reinstalling"
+sudo apt-get update
+sudo apt-get install -y rsync
+rsync -a --info=progress2 "$PROJECT_WIN_PATH/" "$PROJECT_LINUX_PATH/"
+cd "$PROJECT_LINUX_PATH"
+chmod -R u+w .
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+
+echo "[5/7] Verifying react-scripts install"
+ls node_modules/react-scripts
+npm ls react-scripts
+node -p "require('./package.json').dependencies?.['react-scripts'] || require('./package.json').devDependencies?.['react-scripts']"
+
+echo "[6/7] Running npm test"
+npm test -- --watchAll=false || true
+
+echo "[7/7] Capturing detailed logs"
+npm install --verbose 2>&1 | tee npm-install.log || true
+npm test -- --verbose 2>&1 | tee npm-test.log || true
+
+echo "Done. Logs saved to $(pwd)/npm-install.log and $(pwd)/npm-test.log"
+EOF
+
+chmod +x ~/run-cra-react-scripts-fix.sh
+~/run-cra-react-scripts-fix.sh
+```
+
+Review the console output for any failing step. The script is intentionally conservative: it stops on unexpected errors, but the
+`npm test` step is allowed to fail so that the final log capture still runs.
 
 ## 8. Summary Checklist
 
