@@ -15,9 +15,9 @@ The remaining sections provide the longer-form diagnostics for when these four s
 
 Before you begin, ensure the following:
 
-* **WSL version** – `wsl.exe --status` should report WSL2. If you are on WSL1, upgrade first; the instructions below assume a Linux kernel with systemd-style permissions.
-* **Node.js + npm** – `node -v` and `npm -v` should return versions that match your project's `engines` field (if defined). If the commands are missing, install Node.js through the official NodeSource repository or nvm before continuing.
-* **Optional: Docker** – Only required if you intend to use the container-based workaround in [§5](#5-alternative-use-a-node-docker-container).
+- **WSL version** – `wsl.exe --status` should report WSL2. If you are on WSL1, upgrade first; the instructions below assume a Linux kernel with systemd-style permissions.
+- **Node.js + npm** – `node -v` and `npm -v` should return versions that match your project's `engines` field (if defined). If the commands are missing, install Node.js through the official NodeSource repository or nvm before continuing.
+- **Optional: Docker** – Only required if you intend to use the container-based workaround in [§5](#5-alternative-use-a-node-docker-container).
 
 ## 1. Understand the Failure
 
@@ -25,9 +25,9 @@ When `npm test` prints `sh: 1: react-scripts: not found`, the `react-scripts` bi
 
 Key symptoms:
 
-* `npm install` fails with `EACCES: permission denied, mkdir ...`.
-* `node_modules` is absent or incomplete.
-* `npm test` fails immediately because it cannot spawn `react-scripts`.
+- `npm install` fails with `EACCES: permission denied, mkdir ...`.
+- `node_modules` is absent or incomplete.
+- `npm test` fails immediately because it cannot spawn `react-scripts`.
 
 ## 2. Collect Diagnostics
 
@@ -69,7 +69,7 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
-*If `rsync` reports that the source path does not exist, double-check the directory name or mount point. Use `ls /mnt/c/Users` to list available users and locate the project folder. The trailing slash in the source path ensures `.git` and other dotfiles are copied.*
+_If `rsync` reports that the source path does not exist, double-check the directory name or mount point. Use `ls /mnt/c/Users` to list available users and locate the project folder. The trailing slash in the source path ensures `.git` and other dotfiles are copied._
 
 If `~/welcome-to-docker-local` already exists from a prior attempt, remove it or sync again to refresh the contents:
 

@@ -79,7 +79,7 @@ Can you help me create a Python script to calculate the factorial of a number?
 <assistant_response> Sure! Here's a Python script that calculates the factorial of a number:
 
 Creating a Python script to calculate factorials meets the criteria for a good artifact. It's a self-contained piece of code that can be understood on its own and is likely to be reused or modified. This is a new conversation, so there are no pre-existing artifacts. Therefore, I'm creating a new artifact.
-def factorial(n): if n == 0: return 1 else: return n * factorial(n - 1)
+def factorial(n): if n == 0: return 1 else: return n \* factorial(n - 1)
 
 ... </assistant_response>
 
@@ -89,7 +89,7 @@ Thanks for the factorial script! Can you modify it to handle invalid input grace
 <assistant_response> Good point! It's important to handle invalid input to prevent errors. I'll update the script to include input validation.
 
 This request is a direct modification of the existing "factorial-calculator" artifact. It's not a new artifact but an update to make the script more robust. I'll reuse the "factorial-calculator" identifier to maintain continuity and show the evolution of our code.
-def factorial(n): if n == 0: return 1 else: return n * factorial(n - 1)
+def factorial(n): if n == 0: return 1 else: return n \* factorial(n - 1)
 
 while true: try: num = int(input("Enter a non-negative integer: ")) if num < 0: raise ValueError break except ValueError: print("Invalid input. Please enter a non-negative integer.")
 
@@ -122,24 +122,24 @@ I'm teaching a beginner's programming course, and I want to include some interac
 <assistant_response> Teaching a beginner's programming course is a great opportunity to introduce students to fundamental concepts through interactive examples. One idea that comes to mind is building upon the factorial calculator we discussed earlier.
 
 The interactive factorial calculator is a good artifact: it's substantial (>15 lines), self-contained, and usable outside the conversation. It's not simple informational or primarily explanatory content. This is an update to our existing "factorial-calculator" artifact, transforming it into a teaching tool.
-def factorial(n): if n == 0: return 1 else: return n * factorial(n - 1)
+def factorial(n): if n == 0: return 1 else: return n \* factorial(n - 1)
 
 def main(): print("Welcome to the Factorial Calculator!") print("Enter a non-negative integer to calculate its factorial.") print("Enter 'q' to quit the program.")
 
 while true: user_input = input("Enter a number (or 'q' to quit): ")
 
-   if user_input == 'q':
-       print("Thank you for using the Factorial Calculator. Goodbye!")
-       break
+if user_input == 'q':
+print("Thank you for using the Factorial Calculator. Goodbye!")
+break
 
-   try:
-       num = int(user_input)
-       if num < 0:
-           raise ValueError
-       result = factorial(num)
-       print(f"The factorial of {num} is {result}")
-   except ValueError:
-       print("Invalid input. Please enter a non-negative integer or 'q' to quit.")
+try:
+num = int(user_input)
+if num < 0:
+raise ValueError
+result = factorial(num)
+print(f"The factorial of {num} is {result}")
+except ValueError:
+print("Invalid input. Please enter a non-negative integer or 'q' to quit.")
 
 if name == "main": main()
 
@@ -157,10 +157,11 @@ Can you create a React component for a metrics dashboard?
 Creating a React component for a metrics dashboard is a good artifact. It's substantial, self-contained, and can be reused in various web applications. It's not just a brief code snippet or primarily explanatory content. This is a new request, so I'll create a new artifact with the identifier "metrics-dashboard-component".
 import React, { useState, useEffect } from 'react'; import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts'; import { Card, CardHeader, CardContent } from '@/components/ui/card';
 
-const generateData = () => [...array(12)].map((_, i) => ({ month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i], revenue: Math.floor(Math.random() * 5000) + 1000 }));
+const generateData = () => [...array(12)].map((\_, i) => ({ month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i], revenue: Math.floor(Math.random() \* 5000) + 1000 }));
 
 const MetricCard = ({ title, value, change }) => ( {title}
 {value}
+
 <div className={text-sm ${change >= 0 ? 'text-green-500' : 'text-red-500'}}> {change >= 0 ? '↑' : '↓'} {Math.abs(change)}% );
 
 const Dashboard = () => { const [data, setData] = useState(generateData);
